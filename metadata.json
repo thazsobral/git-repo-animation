@@ -1,0 +1,6 @@
+{
+  "name": "git-repo-animation",
+  "description": "Acompanhe a evolução dos commits do repositório de forma animada.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
