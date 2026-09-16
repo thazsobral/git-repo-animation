@@ -103,12 +103,19 @@ export default function App() {
     }
   };
 
-  // Re-layout commits when theme changes
+  // Update commit colors immediately when theme changes
   useEffect(() => {
     if (commits.length === 0) return;
-    const layout = layoutGitCommits(commits, THEMES[theme]);
-    setCommits(layout.commits);
-    setBounds(layout.bounds);
+    const themeColors = THEMES[theme];
+    setCommits((prevCommits) =>
+      prevCommits.map((c) => ({
+        ...c,
+        color:
+          c.lane === 0
+            ? themeColors.mainLaneColor
+            : themeColors.branchColors[(c.lane - 1) % themeColors.branchColors.length],
+      }))
+    );
   }, [theme]);
 
   // Main Animation Tick Hook
@@ -270,6 +277,8 @@ export default function App() {
         onOpenInfo={() => setIsInfoModalOpen(true)}
         isTokenModalOpen={isTokenModalOpen}
         onToggleTokenModal={setIsTokenModalOpen}
+        theme={theme}
+        onChangeTheme={setTheme}
       />
 
       {/* Progress banner during full commit pagination */}
@@ -390,15 +399,24 @@ export default function App() {
 
           <div className="hidden sm:flex bg-slate-900/70 backdrop-blur-md border border-slate-800/60 rounded-xl px-3 py-1.5 text-[11px] text-slate-400 gap-3 shadow-sm">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sky-400" />
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: THEMES[theme].mainLaneColor }}
+              />
               Linha Principal
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-purple-400" />
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: THEMES[theme].branchColors[0] || '#a855f7' }}
+              />
               Branches
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-pink-400" />
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: THEMES[theme].mergeGlow }}
+              />
               Conexões de Merge
             </span>
           </div>

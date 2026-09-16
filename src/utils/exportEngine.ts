@@ -66,6 +66,14 @@ export function renderTimelineFrameToCanvas(
 ) {
   const theme = THEMES[themeKey];
 
+  const getCommitExportColor = (c: GitCommit): string => {
+    if (c.lane === 0) return theme.mainLaneColor;
+    if (theme.branchColors && theme.branchColors.length > 0) {
+      return theme.branchColors[(c.lane - 1) % theme.branchColors.length];
+    }
+    return c.color || theme.mainLaneColor;
+  };
+
   // 1. Draw Background
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, width, height);
@@ -220,9 +228,10 @@ export function renderTimelineFrameToCanvas(
           ctx.shadowBlur = 10;
         }
       } else {
-        ctx.strokeStyle = parent.color;
+        const lineColor = getCommitExportColor(parent);
+        ctx.strokeStyle = lineColor;
         if (camZoom > 0.25) {
-          ctx.shadowColor = parent.color;
+          ctx.shadowColor = lineColor;
           ctx.shadowBlur = 4;
         }
       }
@@ -235,6 +244,7 @@ export function renderTimelineFrameToCanvas(
   for (let i = 0; i <= integerCount && i < commits.length; i++) {
     const commit = commits[i];
     const isLatest = i === integerCount;
+    const nodeColor = getCommitExportColor(commit);
 
     const minScreenRadius = isLatest ? 4.5 : 2.5;
     const effectiveRadius = Math.max(commit.radius, minScreenRadius / Math.max(0.0001, camZoom));
@@ -244,7 +254,7 @@ export function renderTimelineFrameToCanvas(
     if (isLatest || (commit.isMerge && camZoom > 0.2)) {
       ctx.beginPath();
       ctx.arc(commit.x, commit.y, effectiveRadius + (commit.isMerge ? 6 : 4), 0, Math.PI * 2);
-      ctx.fillStyle = commit.isMerge ? theme.mergeGlow : commit.color;
+      ctx.fillStyle = commit.isMerge ? theme.mergeGlow : nodeColor;
       ctx.globalAlpha = 0.35;
       ctx.fill();
       ctx.globalAlpha = 1;
@@ -264,9 +274,9 @@ export function renderTimelineFrameToCanvas(
     // Core circle
     ctx.beginPath();
     ctx.arc(commit.x, commit.y, effectiveRadius, 0, Math.PI * 2);
-    ctx.fillStyle = commit.color;
+    ctx.fillStyle = nodeColor;
     if (camZoom > 0.25) {
-      ctx.shadowColor = commit.color;
+      ctx.shadowColor = nodeColor;
       ctx.shadowBlur = isLatest ? 14 : 5;
     }
     ctx.fill();

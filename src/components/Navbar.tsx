@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   GitBranch,
   Github,
@@ -12,8 +12,11 @@ import {
   X,
   Sparkles,
   Square,
+  Palette,
+  Check,
 } from 'lucide-react';
-import { RepoMetadata } from '../types';
+import { RepoMetadata, VisualTheme } from '../types';
+import { THEMES } from '../utils/themes';
 import { FetchProgress } from '../services/github';
 
 const REPO_SUGGESTIONS = [
@@ -33,6 +36,8 @@ interface NavbarProps {
   onOpenInfo: () => void;
   isTokenModalOpen?: boolean;
   onToggleTokenModal?: (open: boolean) => void;
+  theme?: VisualTheme;
+  onChangeTheme?: (theme: VisualTheme) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -46,10 +51,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenInfo,
   isTokenModalOpen,
   onToggleTokenModal,
+  theme,
+  onChangeTheme,
 }) => {
   const [inputUrl, setInputUrl] = useState('');
   const [internalTokenModal, setInternalTokenModal] = useState(false);
   const [tempToken, setTempToken] = useState(token);
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const themeMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close theme menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (themeMenuRef.current && !themeMenuRef.current.contains(event.target as Node)) {
+        setIsThemeMenuOpen(false);
+      }
+    };
+    if (isThemeMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isThemeMenuOpen]);
 
   const showTokenModal = isTokenModalOpen !== undefined ? isTokenModalOpen : internalTokenModal;
   const setShowTokenModal = (open: boolean) => {
@@ -113,6 +137,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Github className="w-3 h-3 shrink-0" />
                 <span className="truncate">{currentRepo.name}</span>
               </a>
+            )}
+            {theme && onChangeTheme && (
+              <button
+                id="btn-navbar-theme-mobile"
+                type="button"
+                onClick={() => {
+                  const themeKeys = Object.keys(THEMES) as VisualTheme[];
+                  const currIdx = themeKeys.indexOf(theme);
+                  const nextTheme = themeKeys[(currIdx + 1) % themeKeys.length];
+                  onChangeTheme(nextTheme);
+                }}
+                className="p-1.5 rounded-lg border text-xs bg-slate-800 border-slate-700 text-slate-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer"
+                title={`Tema atual: ${THEMES[theme]?.name}. Toque para alternar.`}
+              >
+                <Palette className="w-4 h-4 text-cyan-400" />
+                <span
+                  className="w-2 h-2 rounded-full border border-white/30"
+                  style={{ backgroundColor: THEMES[theme]?.mainLaneColor }}
+                />
+              </button>
             )}
             <button
               id="btn-github-token-mobile"
@@ -235,6 +279,71 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Star className="w-3 h-3 fill-amber-300" />
                 {currentRepo.stars.toLocaleString()}
               </span>
+            </div>
+          )}
+
+          {/* Theme Switcher Trigger (Desktop) */}
+          {theme && onChangeTheme && (
+            <div ref={themeMenuRef} className="relative">
+              <button
+                id="btn-navbar-theme"
+                type="button"
+                onClick={() => setIsThemeMenuOpen((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all cursor-pointer ${
+                  isThemeMenuOpen
+                    ? 'bg-slate-800 border-cyan-500/50 text-cyan-300 ring-2 ring-cyan-500/20'
+                    : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                }`}
+                title="Mudar Tema Visual"
+              >
+                <Palette className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden lg:inline font-medium">{THEMES[theme]?.name}</span>
+                <span
+                  className="w-2.5 h-2.5 rounded-full border border-white/30 shrink-0"
+                  style={{ backgroundColor: THEMES[theme]?.mainLaneColor }}
+                />
+              </button>
+
+              {isThemeMenuOpen && (
+                <div
+                  id="navbar-theme-dropdown"
+                  className="absolute right-0 top-full mt-2 flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl p-1.5 shadow-2xl w-52 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                >
+                  <div className="px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1 flex items-center justify-between">
+                    <span>Temas</span>
+                    <span className="text-cyan-400">4 opções</span>
+                  </div>
+                  {(Object.keys(THEMES) as VisualTheme[]).map((thmKey) => {
+                    const item = THEMES[thmKey];
+                    const isSelected = theme === thmKey;
+                    return (
+                      <button
+                        key={thmKey}
+                        type="button"
+                        id={`navbar-theme-option-${thmKey}`}
+                        onClick={() => {
+                          onChangeTheme(thmKey);
+                          setIsThemeMenuOpen(false);
+                        }}
+                        className={`flex items-center justify-between px-3 py-2 text-xs rounded-xl text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-cyan-500/15 text-cyan-300 font-semibold border border-cyan-500/30'
+                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-3 h-3 rounded-full border border-white/20 shrink-0"
+                            style={{ backgroundColor: item.mainLaneColor }}
+                          />
+                          <span>{item.name}</span>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

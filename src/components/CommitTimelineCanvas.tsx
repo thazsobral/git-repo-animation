@@ -393,6 +393,18 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
     return () => cancelAnimationFrame(animationFrameId);
   }, [externalCanvasRef]);
 
+  // Helper: Get dynamic commit color based on the current visual theme
+  const getCommitThemeColor = (commit: GitCommit, themeConfig: any): string => {
+    if (commit.lane === 0) {
+      return themeConfig.mainLaneColor || '#38bdf8';
+    }
+    const branchColors = themeConfig.branchColors;
+    if (branchColors && branchColors.length > 0) {
+      return branchColors[(commit.lane - 1) % branchColors.length];
+    }
+    return commit.color || themeConfig.mainLaneColor || '#38bdf8';
+  };
+
   // Helper: Draw Git Connection Lines with Bezier Curves and energetic pulses
   const drawGitConnection = (
     ctx: CanvasRenderingContext2D,
@@ -442,9 +454,10 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
         ctx.fill();
       }
     } else {
-      ctx.strokeStyle = from.color;
+      const lineColor = getCommitThemeColor(from, theme);
+      ctx.strokeStyle = lineColor;
       if (camZoom > 0.25) {
-        ctx.shadowColor = from.color;
+        ctx.shadowColor = lineColor;
         ctx.shadowBlur = 4;
       }
       ctx.stroke();
@@ -469,7 +482,7 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(currentX, currentY);
     ctx.lineWidth = isMergeLine ? 3 : 2;
-    ctx.strokeStyle = isMergeLine ? theme.mergeGlow : from.color;
+    ctx.strokeStyle = isMergeLine ? theme.mergeGlow : getCommitThemeColor(from, theme);
     ctx.setLineDash([4, 4]);
     ctx.stroke();
     ctx.restore();
@@ -488,6 +501,8 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
   ) => {
     ctx.save();
 
+    const nodeColor = getCommitThemeColor(commit, theme);
+
     // Ensure node radius is always at least 2.5 to 5.0 screen pixels regardless of zoom
     const minScreenRadius = isLatest || isSelected || isHovered ? 4.5 : 2.5;
     const maxScreenRadius = isLatest || isSelected || isHovered ? 14 : 7;
@@ -505,7 +520,7 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
         ? '#ffffff'
         : commit.isMerge
         ? theme.mergeGlow
-        : commit.color;
+        : nodeColor;
       ctx.globalAlpha = 0.35;
       ctx.fill();
       ctx.globalAlpha = 1.0;
@@ -525,9 +540,9 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
     // Main Node Circle
     ctx.beginPath();
     ctx.arc(commit.x, commit.y, effectiveRadius, 0, Math.PI * 2);
-    ctx.fillStyle = commit.color;
+    ctx.fillStyle = nodeColor;
     if (camZoom > 0.25) {
-      ctx.shadowColor = commit.color;
+      ctx.shadowColor = nodeColor;
       ctx.shadowBlur = isLatest || isSelected ? 15 : 6;
     }
     ctx.fill();
@@ -544,7 +559,7 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
     const canRenderText = camZoom * 11 >= 8.5 || isSelected || isHovered || isLatest;
     if (canRenderText) {
       const worldFontSize = Math.max(10, Math.min(16, 11 / Math.max(0.0001, camZoom)));
-      ctx.fillStyle = isSelected ? '#ffffff' : isLatest ? '#38bdf8' : theme.textMuted;
+      ctx.fillStyle = isSelected ? '#ffffff' : isLatest ? theme.mainLaneColor : theme.textMuted;
       ctx.font = `600 ${worldFontSize}px "JetBrains Mono", monospace`;
       ctx.textAlign = 'center';
       ctx.fillText(commit.shortSha, commit.x, commit.y + effectiveRadius + worldFontSize + 4);
@@ -560,11 +575,12 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
     theme: any
   ) => {
     ctx.save();
+    const nodeColor = getCommitThemeColor(commit, theme);
     const currentRadius = commit.radius * progress;
     // Spawning shockwave ring
     ctx.beginPath();
     ctx.arc(commit.x, commit.y, commit.radius * (1 + (1 - progress) * 2), 0, Math.PI * 2);
-    ctx.strokeStyle = commit.color;
+    ctx.strokeStyle = nodeColor;
     ctx.lineWidth = 2 * (1 - progress);
     ctx.globalAlpha = 1 - progress;
     ctx.stroke();
@@ -573,7 +589,7 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
     ctx.globalAlpha = progress;
     ctx.beginPath();
     ctx.arc(commit.x, commit.y, currentRadius, 0, Math.PI * 2);
-    ctx.fillStyle = commit.color;
+    ctx.fillStyle = nodeColor;
     ctx.fill();
     ctx.restore();
   };
@@ -649,7 +665,7 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
 
     // Card background
     ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-    ctx.strokeStyle = commit.isMerge ? theme.mergeGlow : 'rgba(56, 189, 248, 0.4)';
+    ctx.strokeStyle = commit.isMerge ? theme.mergeGlow : theme.mainLaneColor;
     ctx.lineWidth = 1.5;
     ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
     ctx.shadowBlur = 18;
@@ -659,7 +675,8 @@ export const CommitTimelineCanvas: React.FC<CommitTimelineCanvasProps> = ({
     ctx.stroke();
 
     // Author badge & avatar indicator
-    ctx.fillStyle = commit.color;
+    const badgeColor = getCommitThemeColor(commit, theme);
+    ctx.fillStyle = badgeColor;
     ctx.beginPath();
     ctx.arc(cardX + 34, cardY + 34, 16, 0, Math.PI * 2);
     ctx.fill();

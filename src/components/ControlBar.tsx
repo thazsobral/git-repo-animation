@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -11,6 +11,7 @@ import {
   Palette,
   Sparkles,
   Download,
+  Check,
 } from 'lucide-react';
 import { TimelineViewMode, VisualTheme, GitCommit } from '../types';
 import { THEMES } from '../utils/themes';
@@ -46,6 +47,24 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   currentCommit,
   onOpenExport,
 }) => {
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
+  const themeMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close theme menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (themeMenuRef.current && !themeMenuRef.current.contains(event.target as Node)) {
+        setIsThemeOpen(false);
+      }
+    };
+    if (isThemeOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isThemeOpen]);
+
   const speeds = [0.25, 0.5, 1, 2, 4];
   const progressPercent = totalCommits > 1 ? (currentIndex / (totalCommits - 1)) * 100 : 0;
 
@@ -195,35 +214,69 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             </div>
 
             {/* Theme Selector */}
-            <div className="relative group">
+            <div ref={themeMenuRef} className="relative">
               <button
                 id="btn-theme-menu"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 hover:text-white transition-all"
+                type="button"
+                onClick={() => setIsThemeOpen((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs transition-all cursor-pointer select-none ${
+                  isThemeOpen
+                    ? 'bg-slate-700 border-cyan-500/60 text-cyan-300 ring-2 ring-cyan-500/20'
+                    : 'bg-slate-800/80 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                }`}
                 title="Mudar Tema Visual"
+                aria-expanded={isThemeOpen}
               >
                 <Palette className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden lg:inline">{THEMES[theme].name}</span>
+                <span className="hidden sm:inline font-medium">{THEMES[theme]?.name || 'Tema'}</span>
+                <span
+                  className="w-2.5 h-2.5 rounded-full border border-white/30 shrink-0"
+                  style={{ backgroundColor: THEMES[theme]?.mainLaneColor }}
+                />
               </button>
 
-              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col bg-slate-900 border border-slate-700 rounded-xl p-1.5 shadow-xl w-48 z-50">
-                {(Object.keys(THEMES) as VisualTheme[]).map((thmKey) => (
-                  <button
-                    key={thmKey}
-                    onClick={() => onChangeTheme(thmKey)}
-                    className={`flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors ${
-                      theme === thmKey
-                        ? 'bg-cyan-500/20 text-cyan-400 font-semibold'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <span>{THEMES[thmKey].name}</span>
-                    <span
-                      className="w-3 h-3 rounded-full border border-white/20"
-                      style={{ backgroundColor: THEMES[thmKey].mainLaneColor }}
-                    />
-                  </button>
-                ))}
-              </div>
+              {isThemeOpen && (
+                <div
+                  id="theme-dropdown-menu"
+                  className="absolute right-0 bottom-full mb-2 flex flex-col bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl p-1.5 shadow-2xl w-56 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150"
+                >
+                  <div className="px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1 flex items-center justify-between">
+                    <span>Temas Visuais</span>
+                    <span className="text-cyan-400">4 estilos</span>
+                  </div>
+                  {(Object.keys(THEMES) as VisualTheme[]).map((thmKey) => {
+                    const item = THEMES[thmKey];
+                    const isSelected = theme === thmKey;
+                    return (
+                      <button
+                        key={thmKey}
+                        type="button"
+                        id={`theme-option-${thmKey}`}
+                        onClick={() => {
+                          onChangeTheme(thmKey);
+                          setIsThemeOpen(false);
+                        }}
+                        className={`flex items-center justify-between px-3 py-2 text-xs rounded-xl text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-cyan-500/15 text-cyan-300 font-semibold border border-cyan-500/30'
+                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0"
+                            style={{ backgroundColor: item.mainLaneColor }}
+                          />
+                          <span>{item.name}</span>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Export Action Button */}
