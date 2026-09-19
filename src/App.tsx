@@ -277,8 +277,6 @@ export default function App() {
         onOpenInfo={() => setIsInfoModalOpen(true)}
         isTokenModalOpen={isTokenModalOpen}
         onToggleTokenModal={setIsTokenModalOpen}
-        theme={theme}
-        onChangeTheme={setTheme}
       />
 
       {/* Progress banner during full commit pagination */}
